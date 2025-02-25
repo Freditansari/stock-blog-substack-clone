@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Edit Post</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/trix/1.3.1/trix.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/trix/1.3.1/trix.js"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="max-w-3xl mx-auto mt-10">
+        <h1 class="text-3xl font-bold">Edit Post</h1>
+        
+        <form method="POST" class="mt-5">
+            <label class="block text-gray-300">Title:</label>
+            <input type="text" name="title" value="{{ post.title }}" class="w-full p-2 bg-gray-700 text-white rounded" required>
+
+            <label class="block text-gray-300 mt-4">Content:</label>
+            <input type="hidden" name="content" id="content" value="{{ post.content }}">
+            <trix-editor input="content"></trix-editor>
+
+            <label class="block text-gray-300 mt-4">Image URL (Optional):</label>
+            <input type="text" name="image_url" value="{{ post.image_url or '' }}" class="w-full p-2 bg-gray-700 text-white rounded">
+
+            <label class="block text-gray-300 mt-4">Video URL (Optional):</label>
+            <input type="text" name="video_url" value="{{ post.video_url or '' }}" class="w-full p-2 bg-gray-700 text-white rounded">
+
+            <button type="submit" class="bg-green-500 w-full mt-4 p-2 rounded">Update Post</button>
+        </form>
+
+        <!-- Delete Button -->
+        <form method="POST" action="{{ url_for('delete_post', slug=post.slug) }}" class="mt-4">
+            <button type="submit" class="bg-red-500 w-full p-2 rounded">Delete Post</button>
+        </form>
+
+        <a href="{{ url_for('view_post', slug=post.slug) }}" class="text-blue-400 mt-5 block">View Post</a>
+    </div>
+</body>
+</html>

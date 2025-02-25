@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Subscribers{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold">📬 Your Subscribers</h2>
+
+    {% if subscribers %}
+    <table class="table table-dark table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Subscribed On</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for subscriber in subscribers %}
+            <tr>
+                <td>{{ subscriber.email }}</td>
+                <td>{{ subscriber.timestamp.strftime('%B %d, %Y') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">No subscribers yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

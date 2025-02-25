@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Post{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Create a New Post</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Content</label>
+            <textarea name="content" class="form-control" rows="5" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">YouTube Video URL (Optional)</label>
+            <input type="url" name="youtube_url" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Upload Image/Video (Optional)</label>
+            <input type="file" name="media" class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-success">Publish</button>
+    </form>
+</div>
+{% endblock %}

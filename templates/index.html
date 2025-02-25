@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Dark Mode Substack</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="text-center mt-10">
+        <h1 class="text-4xl">Welcome to Substack Clone</h1>
+        <p class="mt-4">A platform for writers and creators.</p>
+        <div class="mt-5">
+            <a href="{{ url_for('register') }}" class="bg-blue-500 px-4 py-2 rounded">Register</a>
+            <a href="{{ url_for('login') }}" class="bg-green-500 px-4 py-2 rounded">Login</a>
+        </div>
+    </div>
+</body>
+</html>
