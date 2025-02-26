@@ -1,14 +1,16 @@
 from flask import request, render_template, redirect, url_for, flash, jsonify, \
-    Response, request, stream_with_context
+    Response, request, stream_with_context, session, request
 from flask_login import login_required, current_user, logout_user, login_user
 from app import app, db, bcrypt
 from models import User, Subscriber, Post, SiteVisit, AccessCode
-from utils import track_page_visit
+from utils import track_page_visit, require_human_verification
 from werkzeug.utils import secure_filename
 import os
 import uuid
 import json
 from datetime import datetime, timedelta
+import random
+import requests
 
 @app.route('/video/<filename>')
 def stream_video(filename):
@@ -30,7 +32,43 @@ def stream_video(filename):
 # ✅ Homepage
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # ✅ Check if user is already verified
+    if session.get("is_human"):
+        return render_template("index.html")  # Allow access
+
+    # ✅ 30% Chance to Show CAPTCHA
+    if random.random() < 0.3:
+        return redirect(url_for("captcha"))
+
+    return render_template("index.html")
+
+@app.route('/captcha', methods=['GET', 'POST'])
+def captcha():
+    if request.method == "POST":
+        hcaptcha_response = request.form.get("h-captcha-response")
+        if not hcaptcha_response:
+            flash("❌ Please complete the CAPTCHA!", "danger")
+            return redirect(url_for("captcha"))
+
+        # ✅ Verify hCaptcha with the hCaptcha API
+        verify_url = "https://api.hcaptcha.com/siteverify"
+        payload = {
+            "secret": app.config["HCAPTCHA_SECRET_KEY"],  # ✅ Correct way to access config
+            "response": hcaptcha_response,
+        }
+        response = requests.post(verify_url, data=payload)
+        result = response.json()
+
+        if result.get("success"):
+            session["is_human"] = True  # ✅ Mark user as verified
+            flash("✅ Verification successful!", "success")
+            return redirect(url_for("index"))
+        else:
+            flash("❌ CAPTCHA verification failed. Try again.", "danger")
+            return redirect(url_for("captcha"))
+
+    return render_template("captcha.html", hcaptcha_site_key=app.config["HCAPTCHA_SITE_KEY"])
+
 
 # ✅ Registration Route
 @app.route('/register', methods=['GET', 'POST'])
@@ -78,6 +116,7 @@ def logout():
 
 # ✅ User Profile Route (Tracks Profile Visits)
 @app.route('/<username>')
+@require_human_verification
 @track_page_visit
 def user_home(username):
     user = User.query.filter_by(username=username).first_or_404()
@@ -189,7 +228,7 @@ def delete_post(slug):
 # ✅ View Blog Post (Tracks Blog Visits)
 @app.route('/post/<slug>')
 @track_page_visit
-# @login_required
+@require_human_verification
 def view_post(slug):
     post = Post.query.filter_by(slug=slug).first_or_404()
 

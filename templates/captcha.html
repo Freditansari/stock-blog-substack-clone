@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify You're Human{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">🔒 Verify You're Human</h2>
+    <p class="text-center">Please complete the CAPTCHA to continue.</p>
+
+    <form method="POST" class="text-center">
+        <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}"></div>
+        <br>
+        <button type="submit" class="btn btn-primary mt-3">Verify</button>
+    </form>
+</div>
+
+<!-- ✅ Load hCaptcha -->
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+{% endblock %}

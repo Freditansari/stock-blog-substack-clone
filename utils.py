@@ -28,3 +28,21 @@ def track_page_visit(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def require_human_verification(route_function):
+    """Decorator to randomly require CAPTCHA verification before accessing a route."""
+    def wrapper(*args, **kwargs):
+        # ✅ Check if user is already verified
+        if session.get("is_human"):
+            return route_function(*args, **kwargs)
+
+        # ✅ 30% Chance to Show CAPTCHA
+        if random.random() < 0.3:
+            return redirect(url_for("captcha"))
+
+        return route_function(*args, **kwargs)
+
+    # Preserve function name & docstring
+    wrapper.__name__ = route_function.__name__
+    return wrapper
