@@ -13,12 +13,20 @@
 
                 <!-- ✅ Social Share Buttons -->
                 <div class="twitter-share">
-                    <a href="https://twitter.com/intent/tweet?text={{ post.title }}&url={{ request.url }}" target="_blank">🐦 Tweet</a>
-                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" target="_blank">📘 Share</a>
-                    <a href="https://t.me/share/url?url={{ request.url }}" target="_blank">💬 Telegram</a>
+                    <a href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ request.url|urlencode }}" target="_blank">🐦 Tweet</a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank">📘 Share</a>
+                    <a href="https://t.me/share/url?url={{ request.url|urlencode }}" target="_blank">💬 Telegram</a>
                 </div>
 
+                <!-- ✅ Premium Content Restriction -->
+                {% if post.is_premium and (not current_user.is_authenticated or not current_user.is_premium) %}
+                <div class="alert alert-warning text-center mt-3">
+                    🔒 This is a premium post. <strong>Subscribe to unlock full access.</strong>
+                    <a href="{{ url_for('subscribe_page') }}" class="btn btn-primary btn-sm d-block mt-2">Subscribe Now</a>
+                </div>
+                {% else %}
                 <p class="twitter-content">{{ post.content | safe }}</p>
+                {% endif %}
 
                 <!-- ✅ Show YouTube Embed -->
                 {% if post.youtube_url %}
@@ -31,7 +39,7 @@
                 {% if post.media_url %}
                     {% if post.media_url.endswith(('.mp4', '.avi', '.mov')) %}
                         <video controls class="twitter-image">
-                            <source src="{{ post.media_url }}" type="video/mp4">
+                            <source src="{{ url_for('stream_video', filename=post.media_url.split('/')[-1]) }}" type="video/mp4">
                         </video>
                     {% else %}
                         <img src="{{ post.media_url }}" class="twitter-image">
@@ -43,16 +51,47 @@
         <!-- ✅ Right Section: Subscribe Box (Takes 4 columns) -->
         <div class="col-lg-4">
             <div class="card card-subscribe">
-                <div class="card-body text-light">
-                    <h4 class="card-title">📩 Subscribe to {{ user.username }}</h4>
+                <div class="card-body text-light text-center">
+                    <h4 class="card-title">📩 Subscribe to {{ post.user.username }}</h4>
                     <p>Get the latest posts delivered to your inbox.</p>
-                    <form action="{{ url_for('subscribe', username=user.username) }}" method="POST">
+                    <form action="{{ url_for('subscribe', username=post.user.username) }}" method="POST">
                         <input type="email" name="email" class="form-control mb-2" placeholder="Your email" required>
                         <button type="submit" class="btn btn-success w-100">Subscribe</button>
                     </form>
                 </div>
             </div>
+
+            <!-- ✅ Premium Subscription Box -->
+            {% if not current_user.is_premium %}
+            <div class="card card-premium mt-3">
+                <div class="card-body text-light text-center">
+                    <h4 class="card-title">🔑 Unlock Premium Content</h4>
+                    <p>Subscribe to gain access to premium articles.</p>
+                    <a href="{{ url_for('subscribe_page') }}" class="btn btn-warning w-100">Upgrade to Premium</a>
+                </div>
+            </div>
+            {% else %}
+            <div class="card card-premium mt-3">
+                <div class="card-body text-light text-center">
+                    <h4 class="card-title">🎉 Premium Active!</h4>
+                    <p>Your access expires on <strong>{{ current_user.premium_expiry.strftime('%B %d, %Y') }}</strong></p>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<!-- ✅ Send Custom Event to Google Analytics -->
+<script>
+    gtag('event', 'post_view', {
+        'event_category': 'Blog',
+        'event_label': '{{ post.title }}',
+        'post_id': '{{ post.id }}',
+        'post_slug': '{{ post.slug }}',
+        'post_author': '{{ post.user.username }}',
+        'page_url': window.location.href,
+        'referrer': document.referrer
+    });
+</script>
 {% endblock %}

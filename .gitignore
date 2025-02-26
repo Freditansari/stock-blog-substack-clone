@@ -1,0 +1,5 @@
+__pycache__
+instance/
+static/uploads/
+instance/site.db
+config.py

@@ -1,0 +1,5 @@
+
+add google analytics
+place the application in server
+manage the domain name. 
+fill the data. 

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Subscribe to Premium{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card card-subscribe text-center text-light">
+                <div class="card-body">
+                    <h4 class="card-title">📩 Get Premium Access</h4>
+                    <p>Unlock exclusive content and enjoy an ad-free experience.</p>
+
+                    <!-- ✅ PayPal Subscription Button -->
+                    <h5>💳 PayPal Subscription</h5>
+                    <div id="paypal-button-container" class="mb-3"></div>
+                    
+                    <hr>
+
+                    <!-- ✅ Redeem an Access Code -->
+                    <h5>🔑 Have an Access Code?</h5>
+                    <form action="{{ url_for('apply_access_code') }}" method="POST">
+                        <input type="text" name="access_code" placeholder="Enter Access Code" required class="form-control text-center">
+                        <button type="submit" class="btn btn-primary w-100 mt-2">Redeem</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Include PayPal SDK -->
+<script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID"></script>
+
+<script>
+    paypal.Buttons({
+        createOrder: function(data, actions) {
+            return actions.order.create({
+                purchase_units: [{
+                    amount: { value: '15.00' } // 💲 Charge $15 for 1 Year
+                }]
+            });
+        },
+        onApprove: function(data, actions) {
+            return actions.order.capture().then(function(details) {
+                fetch('/paypal-success', {
+                    method: 'POST',
+                    body: JSON.stringify({ orderID: data.orderID }),
+                    headers: { 'Content-Type': 'application/json' }
+                }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Payment successful! You now have premium access.');
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+    }).render('#paypal-button-container');
+</script>
+{% endblock %}

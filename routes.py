@@ -1,11 +1,31 @@
-from flask import request, render_template, redirect, url_for, flash, jsonify
+from flask import request, render_template, redirect, url_for, flash, jsonify, \
+    Response, request, stream_with_context
 from flask_login import login_required, current_user, logout_user, login_user
 from app import app, db, bcrypt
-from models import User, Subscriber, Post, SiteVisit
+from models import User, Subscriber, Post, SiteVisit, AccessCode
 from utils import track_page_visit
 from werkzeug.utils import secure_filename
 import os
 import uuid
+import json
+from datetime import datetime, timedelta
+
+@app.route('/video/<filename>')
+def stream_video(filename):
+    """Serve videos efficiently using a non-blocking generator."""
+    video_path = os.path.join(app.static_folder, 'uploads', filename)
+
+    if not os.path.exists(video_path):
+        return "Video Not Found", 404
+
+    def generate():
+        """Stream the video file in chunks to prevent blocking the Flask app."""
+        chunk_size = 1024 * 1024  # 1MB per chunk
+        with open(video_path, "rb") as video:
+            while chunk := video.read(chunk_size):
+                yield chunk
+
+    return Response(stream_with_context(generate()), mimetype="video/mp4")
 
 # ✅ Homepage
 @app.route('/')
@@ -87,31 +107,32 @@ def subscribe(username):
 # ✅ Create New Post
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
 @app.route('/create-post', methods=['GET', 'POST'])
 @login_required
 def create_post():
     if request.method == 'POST':
         title = request.form['title']
         content = request.form['content']
-        youtube_url = request.form.get('youtube_url')  # ✅ Get YouTube link
-        file = request.files.get('media')  # ✅ Get uploaded file
+        youtube_url = request.form.get('youtube_url')
+        file = request.files.get('media')
+        is_premium = 'is_premium' in request.form  # ✅ Check if premium
 
+        # ✅ Handle File Upload
         media_url = None
         if file and allowed_file(file.filename):
-            file_extension = file.filename.rsplit('.', 1)[1].lower()  # ✅ Extract file extension
-            random_filename = f"{uuid.uuid4().hex}.{file_extension}"  # ✅ Generate random filename
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], random_filename)
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
-            media_url = f'/static/uploads/{random_filename}'  # ✅ Store media URL
+            media_url = f'/static/uploads/{filename}'
 
-        # ✅ Create a new post with the uploaded file or YouTube link
+        # ✅ Save Post
         new_post = Post(
             title=title,
             content=content,
             youtube_url=youtube_url,
             media_url=media_url,
-            user_id=current_user.id
+            user_id=current_user.id,
+            is_premium=is_premium  # ✅ Save premium flag
         )
 
         db.session.add(new_post)
@@ -120,6 +141,7 @@ def create_post():
         return redirect(url_for('user_home', username=current_user.username))
 
     return render_template('create_post.html')
+
 
 # ✅ Manage Posts (Edit & Delete Access)
 @app.route('/manage-posts')
@@ -167,10 +189,17 @@ def delete_post(slug):
 # ✅ View Blog Post (Tracks Blog Visits)
 @app.route('/post/<slug>')
 @track_page_visit
+# @login_required
 def view_post(slug):
     post = Post.query.filter_by(slug=slug).first_or_404()
-    user = post.user  # ✅ Assign user from the post
-    return render_template('view_post.html', post=post, user=user)
+
+    # ✅ If post is premium, check user subscription
+    if post.is_premium and (not current_user.is_premium or current_user.premium_expiry < datetime.utcnow()):
+        flash("🔒 This content is only available for premium members!", "danger")
+        return redirect(url_for('subscribe_page'))
+
+    return render_template('view_post.html', post=post)
+
 
 # ✅ Site Analytics API (Most Visited Pages)
 @app.route('/site-analytics')
@@ -190,4 +219,83 @@ def site_analytics():
 def manage_subscribers():
     subscribers = Subscriber.query.filter_by(blogger_id=current_user.id).all()
     return render_template('manage_subscribers.html', subscribers=subscribers)
+
+@app.route('/subscribe')
+@login_required
+def subscribe_page():
+    return render_template('subscribe.html')
+
+@app.route('/payment-success')
+@login_required
+def payment_success():
+    current_user.is_premium = True
+    current_user.premium_expiry = datetime.utcnow() + timedelta(days=365)  # ✅ 1-year premium
+    db.session.commit()
+    flash(f"You are now a premium subscriber until {current_user.premium_expiry.strftime('%B %d, %Y')}", "success")
+    return redirect(url_for('user_home', username=current_user.username))
+
+@app.route('/generate-code', methods=['POST'])
+@login_required
+def generate_code():
+    if not current_user.is_admin:
+        flash("Unauthorized", "danger")
+        return redirect(url_for('user_home', username=current_user.username))
+
+    days_valid = int(request.form['days_valid'])  # ⏳ How many days the code is valid for
+    new_code = AccessCode(days_valid=days_valid)
+
+    db.session.add(new_code)
+    db.session.commit()
+
+    flash(f"✅ Access code '{new_code.code}' created for {days_valid} days!", "success")
+    return redirect(url_for('manage_access_codes'))
+
+@app.route('/apply-access-code', methods=['POST'])
+@login_required
+def apply_access_code():
+    code = request.form['access_code'].strip().upper()
+    access_code = AccessCode.query.filter_by(code=code, is_used=False).first()
+
+    if access_code:
+        # ✅ Activate premium access
+        current_user.is_premium = True
+        current_user.premium_expiry = datetime.utcnow() + timedelta(days=access_code.days_valid)
+        access_code.is_used = True  # ✅ Mark as used
+        db.session.commit()
+
+        flash(f"Access code applied! Premium valid until {current_user.premium_expiry.strftime('%B %d, %Y')}.", "success")
+        return redirect(url_for('user_home', username=current_user.username))
+
+    flash("Invalid or already used access code.", "danger")
+    return redirect(url_for('subscribe_page'))
+
+
+@app.route('/paypal-success', methods=['POST'])
+@login_required
+def paypal_success():
+    data = json.loads(request.data)
+
+    # ✅ Verify payment (for real apps, check PayPal API)
+    if data.get("orderID"):
+        current_user.is_premium = True
+        current_user.premium_expiry = datetime.utcnow() + timedelta(days=365)  # ✅ 1 Year Premium
+        db.session.commit()
+
+        return jsonify({"success": True}), 200
+
+    return jsonify({"success": False}), 400
+
+
+
+@app.route('/manage-access-codes')
+@login_required
+def manage_access_codes():
+    if not current_user.is_admin:
+        flash("Unauthorized", "danger")
+        return redirect(url_for('user_home', username=current_user.username))
+
+    access_codes = AccessCode.query.order_by(AccessCode.created_at.desc()).all()
+    return render_template('manage_access_codes.html', access_codes=access_codes)
+
+
 

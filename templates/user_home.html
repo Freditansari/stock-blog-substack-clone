@@ -15,47 +15,60 @@
                 <a href="{{ url_for('create_post') }}" class="btn btn-success">+ Create New Post</a>
                 <a href="{{ url_for('manage_posts') }}" class="btn btn-primary">📂 Manage Posts</a>
                 <a href="{{ url_for('manage_subscribers') }}" class="btn btn-warning">📬 Manage {{ user.subscribers|length }} Subscribers</a>
-
+        
+                <!-- ✅ Show "Manage Access Codes" ONLY if the user is an admin -->
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('manage_access_codes') }}" class="btn btn-info">🔑 Manage Access Codes</a>
+                {% endif %}
             </div>
-            {% endif %}
+        {% endif %}
 
-            <!-- ✅ Twitter-Style Posts -->
+            <!-- ✅ Display Posts -->
             {% for post in posts %}
-          
             <div class="twitter-card">
                 <h3 class="twitter-title">{{ post.title }}</h3>
-                <p class="twitter-meta">{{ post.timestamp.strftime('%B %d, %Y') }}</p>
+                <p class="twitter-meta">{{ post.timestamp.strftime('%B %d, %Y %I:%M %p') }}</p>
 
-                <p class="twitter-content">{{ post.content[:200] | safe }}...</p>
+                <!-- ✅ Premium Content Indicator -->
+                {% if post.is_premium %}
+                <div class="alert alert-warning text-center p-2 mb-2">🔒 Premium Content</div>
+                {% endif %}
 
-                <a href="{{ url_for('view_post', slug=post.slug) }}" class="twitter-read-more">Read More</a>
+                <!-- ✅ Content Handling -->
+                {% if post.is_premium and (not current_user.is_authenticated or not current_user.is_premium) %}
+                    <p class="twitter-content text-muted">
+                        🔒 This is a premium post. Subscribe to unlock.
+                    </p>
+                    <a href="{{ url_for('subscribe_page') }}" class="btn btn-warning w-100">🔓 Subscribe to Unlock</a>
+                {% else %}
+                    <p class="twitter-content">{{ post.content[:200] | safe }}...</p>
+                    <a href="{{ url_for('view_post', slug=post.slug) }}" class="twitter-read-more">Read More</a>
 
-                <!-- ✅ Show Image or Video -->
-                {% if post.media_url %}
-                    {% if post.media_url.endswith(('.mp4', '.avi', '.mov')) %}
-                        <video controls class="twitter-image">
-                            <source src="{{ post.media_url }}" type="video/mp4">
-                        </video>
-                    {% else %}
-                        <img src="{{ post.media_url }}" class="twitter-image">
+                    <!-- ✅ Show Image or Video -->
+                    {% if post.media_url %}
+                        {% if post.media_url.endswith(('.mp4', '.avi', '.mov')) %}
+                            <video controls class="twitter-image">
+                                <source src="{{ url_for('stream_video', filename=post.media_url.split('/')[-1]) }}" type="video/mp4">
+                            </video>
+                        {% else %}
+                            <img src="{{ post.media_url }}" class="twitter-image">
+                        {% endif %}
                     {% endif %}
                 {% endif %}
 
-         
-
                 <!-- ✅ Share Buttons -->
                 <div class="twitter-share">
-                    <a href="https://twitter.com/intent/tweet?text={{ post.title }}&url={{ request.url }}" target="_blank">🐦 Tweet</a>
-                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" target="_blank">📘 Share</a>
-                    <a href="https://t.me/share/url?url={{ request.url }}" target="_blank">💬 Telegram</a>
+                    <a href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ request.url|urlencode }}" target="_blank">🐦 Tweet</a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank">📘 Share</a>
+                    <a href="https://t.me/share/url?url={{ request.url|urlencode }}" target="_blank">💬 Telegram</a>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- ✅ Right Side: Subscribe Box -->
+        <!-- ✅ Right Side: Subscribe & Premium Box -->
         <div class="col-lg-4">
-            <div class="card card-subscribe">
+            <div class="card card-subscribe mb-4">
                 <div class="card-body text-light">
                     <h4 class="card-title">📩 Subscribe to {{ user.username }}</h4>
                     <p>Get the latest posts delivered to your inbox.</p>
@@ -65,6 +78,24 @@
                     </form>
                 </div>
             </div>
+
+            <!-- ✅ Premium Subscription Box -->
+            {% if not current_user.is_premium %}
+            <div class="card card-premium">
+                <div class="card-body text-light">
+                    <h4 class="card-title">🔑 Unlock Premium Content</h4>
+                    <p>Subscribe to gain access to premium articles.</p>
+                    <a href="{{ url_for('subscribe_page') }}" class="btn btn-warning w-100">Upgrade to Premium</a>
+                </div>
+            </div>
+            {% else %}
+            <div class="card card-premium">
+                <div class="card-body text-light">
+                    <h4 class="card-title">🎉 Premium Active!</h4>
+                    <p>Your access expires on <strong>{{ current_user.premium_expiry.strftime('%B %d, %Y') }}</strong></p>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

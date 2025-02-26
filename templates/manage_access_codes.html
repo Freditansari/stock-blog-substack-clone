@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Access Codes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="fw-bold">🔑 Manage Access Codes</h1>
+    
+    <!-- ✅ Generate New Code -->
+    <form action="{{ url_for('generate_code') }}" method="POST" class="mb-4">
+        <label for="days_valid">Days Valid:</label>
+        <input type="number" name="days_valid" min="1" required class="form-control w-25 d-inline">
+        <button type="submit" class="btn btn-primary">Generate Code</button>
+    </form>
+
+    <!-- ✅ List of Access Codes -->
+    <table class="table table-dark table-striped">
+        <thead>
+            <tr>
+                <th>Access Code</th>
+                <th>Days Valid</th>
+                <th>Created At</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for code in access_codes %}
+            <tr>
+                <td><strong>{{ code.code }}</strong></td>
+                <td>{{ code.days_valid }} days</td>
+                <td>{{ code.created_at.strftime('%B %d, %Y') }}</td>
+                <td>
+                    {% if code.is_used %}
+                    <span class="text-danger">❌ Used</span>
+                    {% else %}
+                    <span class="text-success">✅ Available</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
