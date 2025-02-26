@@ -3,3 +3,11 @@ add google analytics
 place the application in server
 manage the domain name. 
 fill the data. 
+
+
+
+(substack-clone) fredyyudiawan@Fredys-MacBook-Pro stock-blog % python generate_access_codes.py
+✅ Access Code 'Y3OILJZ9UB' created for 365 days.
+✅ Access Code 'VLQLR9MMBD' created for 180 days.
+✅ Access Code 'TCMMA639U9' created for 30 days.
+✅ Default access codes added!
