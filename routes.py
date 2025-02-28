@@ -2,7 +2,7 @@ from flask import request, render_template, redirect, url_for, flash, jsonify, \
     Response, request, stream_with_context, session, request
 from flask_login import login_required, current_user, logout_user, login_user
 from app import app, db, bcrypt
-from models import User, Subscriber, Post, SiteVisit, AccessCode
+from models import User, Subscriber, Post, SiteVisit, AccessCode, CreatorPayment
 from utils import track_page_visit, require_human_verification
 from werkzeug.utils import secure_filename
 import os
@@ -336,5 +336,15 @@ def manage_access_codes():
     access_codes = AccessCode.query.order_by(AccessCode.created_at.desc()).all()
     return render_template('manage_access_codes.html', access_codes=access_codes)
 
+@app.route('/creator-payments')
+@login_required
+def creator_payments():
+    if not current_user.is_admin:
+        flash("Unauthorized", "danger")
+        return redirect(url_for('index'))
+
+    # ✅ Get all payments sorted by date
+    payments = CreatorPayment.query.order_by(CreatorPayment.payment_date.desc()).all()
+    return render_template('creator_payments.html', payments=payments)
 
 

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Creator Payments{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>💰 Monthly Creator Payments</h2>
+
+    {% if payments %}
+    <table class="table table-dark table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Creator</th>
+                <th>Amount Paid</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td>{{ payment.payment_date.strftime('%B %d, %Y') }}</td>
+                <td>{{ payment.creator.username }}</td>
+                <td>${{ payment.amount }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No payments yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

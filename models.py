@@ -25,21 +25,37 @@ class User(db.Model, UserMixin):
     
     is_admin = db.Column(db.Boolean, default=False)  # ✅ Admin Privilege
     
+    # ✅ Tracking Referral Earnings
+    premium_subscribers_count = db.Column(db.Integer, default=0)  # ✅ How many premium users this creator referred
+    total_earnings = db.Column(db.Float, default=0.0)  # ✅ Creator's total earnings from referrals
+
     # Relationships
     posts = db.relationship("Post", back_populates="user", cascade="all, delete-orphan")
     subscribers = db.relationship("Subscriber", back_populates="blogger", cascade="all, delete-orphan")
+    payments = db.relationship("Payment", back_populates="creator", cascade="all, delete-orphan")
 
     def is_premium_active(self):
         """Check if user has an active premium subscription."""
         return self.is_premium and (self.premium_expiry is None or self.premium_expiry > datetime.utcnow())
 
-    def grant_premium(self, days=365):
-        """Grant premium access for a specified number of days (default: 1 year)."""
+    def grant_premium(self, days=365, referrer=None):
+        """
+        Grant premium access for a specified number of days (default: 1 year).
+        If a referrer is provided, increase their earnings & referral count.
+        """
         if self.premium_expiry is None or self.premium_expiry < datetime.utcnow():
             self.premium_expiry = datetime.utcnow() + timedelta(days=days)
         else:
             self.premium_expiry += timedelta(days=days)
         self.is_premium = True
+
+        # ✅ If referred by a creator, update their earnings
+        if referrer:
+            referrer.premium_subscribers_count += 1
+            referrer.total_earnings += 10  # Example: Pay $10 per referral
+
+        db.session.commit()
+
 
 
 # ✅ Subscriber Model
@@ -137,3 +153,13 @@ class AccessCode(db.Model):
     def mark_used(self):
         """Mark this access code as used."""
         self.is_used = True
+        
+class CreatorPayment(db.Model):
+    __tablename__ = "creator_payment"
+
+    id = db.Column(db.Integer, primary_key=True)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    creator = db.relationship('User', back_populates='payments')

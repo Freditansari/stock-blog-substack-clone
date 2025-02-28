@@ -1,7 +1,9 @@
 from functools import wraps
-from flask import request
+from flask import request, session
 from sqlalchemy.sql import func
 from models import db, SiteVisit
+import random
+
 
 def track_page_visit(func):
     """Decorator to track visits for any page."""
